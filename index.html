@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pomodoro 25/5 — Focus & Wake</title>
+    <meta
+      name="description"
+      content="Pomodoro 25/5 con herramientas anti-sueño: caminar, agua fría, respiración, hidratación y control de cafeína."
+    />
+    <link rel="icon" href="data:," />
+
+    <style>
+      :root{
+        --bg0:#070A12;
+        --bg1:#0B1022;
+        --card: rgba(255,255,255,.08);
+        --card2: rgba(255,255,255,.06);
+        --stroke: rgba(255,255,255,.14);
+        --text: rgba(255,255,255,.92);
+        --muted: rgba(255,255,255,.68);
+        --muted2: rgba(255,255,255,.55);
+        --good: rgba(77, 255, 158, .95);
+        --warn: rgba(255, 214, 102, .95);
+        --shadow: 0 18px 60px rgba(0,0,0,.55);
+        --shadow2: 0 10px 30px rgba(0,0,0,.35);
+        --r: 22px;
+        --r2: 16px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      }
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{
+        margin:0;
+        color:var(--text);
+        font-family:var(--sans);
+        background:
+          radial-gradient(1200px 700px at 15% 20%, rgba(124, 92, 255, .28), transparent 60%),
+          radial-gradient(1000px 700px at 85% 30%, rgba(77, 255, 158, .18), transparent 60%),
+          radial-gradient(900px 600px at 55% 95%, rgba(255, 214, 102, .12), transparent 55%),
+          linear-gradient(180deg, var(--bg0), var(--bg1));
+        overflow-x:hidden;
+      }
+      .wrap{
+        min-height:100%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:22px;
+      }
+      .app{
+        width:min(1100px, 100%);
+        display:grid;
+        grid-template-columns: 1.2fr .8fr;
+        gap:18px;
+      }
+      @media (max-width: 980px){
+        .app{grid-template-columns:1fr}
+      }
+      .card{
+        background: linear-gradient(180deg, var(--card), var(--card2));
+        border: 1px solid var(--stroke);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        overflow:hidden;
+        position:relative;
+      }
+      .card:before{
+        content:"";
+        position:absolute; inset:-2px;
+        background:
+          radial-gradient(900px 240px at 15% 0%, rgba(255,255,255,.12), transparent 60%),
+          radial-gradient(700px 240px at 85% 10%, rgba(255,255,255,.08), transparent 60%);
+        pointer-events:none;
+      }
+      .pad{padding:18px}
+      .header{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:14px;
+      }
+      .title{
+        display:flex; gap:12px; align-items:center;
+      }
+      .badge{
+        display:inline-flex; align-items:center; gap:8px;
+        padding:8px 12px;
+        border-radius: 999px;
+        border:1px solid var(--stroke);
+        background: rgba(0,0,0,.18);
+        box-shadow: var(--shadow2);
+        font-size:13px;
+        color:var(--muted);
+        user-select:none;
+      }
+      .dot{
+        width:10px; height:10px; border-radius:99px;
+        background: var(--good);
+        box-shadow: 0 0 0 4px rgba(77,255,158,.14);
+      }
+      .dot.break{background: var(--warn); box-shadow:0 0 0 4px rgba(255,214,102,.14);}
+      .dot.paused{background: rgba(255,255,255,.35); box-shadow:0 0 0 4px rgba(255,255,255,.08);}
+      h1{
+        margin:0;
+        font-size:18px;
+        letter-spacing:.2px;
+      }
+      .sub{
+        margin:6px 0 0 0;
+        color:var(--muted);
+        font-size:13px;
+        line-height:1.35;
+      }
+      .rightActions{
+        display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; align-items:center;
+      }
+      .toggle{
+        display:flex; align-items:center; gap:8px;
+        padding:8px 10px;
+        border-radius: 999px;
+        border:1px solid var(--stroke);
+        background: rgba(0,0,0,.18);
+        box-shadow: var(--shadow2);
+        user-select:none;
+        font-size:12.5px;
+        color:var(--muted);
+      }
+      .switch{
+        width:44px; height:26px;
+        border-radius:999px;
+        border:1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.08);
+        position:relative;
+        cursor:pointer;
+      }
+      .knob{
+        position:absolute; top:3px; left:3px;
+        width:20px; height:20px; border-radius:99px;
+        background: rgba(255,255,255,.82);
+        transition: all .18s ease;
+        box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      }
+      .switch.on{background: rgba(77,255,158,.18); border-color: rgba(77,255,158,.35);}
+      .switch.on .knob{left:21px; background: rgba(77,255,158,.95);}
+      .switch.warn.on{background: rgba(255,214,102,.18); border-color: rgba(255,214,102,.35);}
+      .switch.warn.on .knob{background: rgba(255,214,102,.95);}
+      .switch.neutral.on{background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22);}
+      .switch.neutral.on .knob{background: rgba(255,255,255,.92);}
+      .switch.good.on{
+  background: rgba(77, 228, 255, 0.18);
+  border-color: rgba(77,255,158,.35);
+}
+.switch.good.on .knob{
+  background: rgba(77, 216, 255, 0.95);
+}
+
+      .timerArea{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:16px;
+        margin-top:14px;
+      }
+      @media (max-width: 720px){
+        .timerArea{grid-template-columns:1fr}
+      }
+      .big{
+        padding:18px;
+        border-radius: var(--r2);
+        border:1px solid rgba(255,255,255,.12);
+        background: rgba(0,0,0,.18);
+        box-shadow: var(--shadow2);
+        position:relative;
+        overflow:hidden;
+      }
+      .big:after{
+        content:"";
+        position:absolute; inset:-1px;
+        background: radial-gradient(700px 240px at 20% 10%, rgba(255,255,255,.10), transparent 55%);
+        pointer-events:none;
+      }
+      .clockRow{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+      .time{
+        font-family: var(--mono);
+        font-size:56px;
+        letter-spacing:-1px;
+        margin:10px 0 6px 0;
+        line-height:1;
+      }
+      .phaseLabel{
+        display:flex; align-items:center; gap:10px;
+        color: var(--muted);
+        font-size:13px;
+      }
+      .pill{
+        padding:6px 10px;
+        border-radius:999px;
+        border:1px solid rgba(255,255,255,.14);
+        background: rgba(255,255,255,.06);
+        color: var(--muted);
+        font-size:12px;
+        user-select:none;
+      }
+      .progressWrap{margin-top:12px}
+      .bar{
+        height:10px;
+        border-radius:999px;
+        background: rgba(255,255,255,.08);
+        border:1px solid rgba(255,255,255,.10);
+        overflow:hidden;
+      }
+      .fill{
+        height:100%;
+        border-radius:999px;
+        width:0%;
+        transition: width .25s ease;
+        background: linear-gradient(90deg, rgba(77,255,158,.95), rgba(124,92,255,.85));
+      }
+      .fill.break{
+        background: linear-gradient(90deg, rgba(255,214,102,.95), rgba(124,92,255,.70));
+      }
+      .controls{
+        margin-top:14px;
+        display:flex; flex-wrap:wrap; gap:10px;
+      }
+      .btn{
+        appearance:none; border:0;
+        border-radius: 14px;
+        padding:10px 12px;
+        font-size:13px;
+        color: var(--text);
+        background: rgba(255,255,255,.10);
+        border:1px solid rgba(255,255,255,.14);
+        box-shadow: var(--shadow2);
+        cursor:pointer;
+        transition: transform .08s ease, background .12s ease, border-color .12s ease;
+        user-select:none;
+      }
+      .btn:hover{background: rgba(255,255,255,.14);}
+      .btn:active{transform: translateY(1px);}
+      .btn.primary{
+        background: rgba(77,255,158,.16);
+        border-color: rgba(77,255,158,.28);
+      }
+      .btn.primary:hover{background: rgba(77,255,158,.22);}
+      .btn.warn{
+        background: rgba(255,214,102,.14);
+        border-color: rgba(255,214,102,.28);
+      }
+      .btn.warn:hover{background: rgba(255,214,102,.20);}
+      .btn.ghost{
+        background: rgba(0,0,0,.16);
+      }
+      .kbs{
+        margin-top:10px;
+        color:var(--muted2);
+        font-size:12px;
+        display:flex; flex-wrap:wrap; gap:10px;
+      }
+      .kbd{
+        font-family:var(--mono);
+        font-size:11.5px;
+        padding:4px 8px;
+        border-radius:10px;
+        border:1px solid rgba(255,255,255,.14);
+        background: rgba(0,0,0,.16);
+        color: var(--muted);
+      }
+      .sideGrid{
+        display:grid; gap:14px;
+      }
+      .sectionTitle{
+        display:flex; align-items:center; justify-content:space-between;
+        gap:10px;
+        margin:0 0 10px 0;
+      }
+      .sectionTitle h2{
+        margin:0;
+        font-size:14px;
+        letter-spacing:.2px;
+        color: var(--text);
+      }
+      .mini{
+        padding:14px;
+        border-radius: var(--r2);
+        border:1px solid rgba(255,255,255,.12);
+        background: rgba(0,0,0,.16);
+        box-shadow: var(--shadow2);
+      }
+      .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+      @media (max-width: 980px){ .grid2{grid-template-columns:1fr} }
+
+      .list{
+        margin:0; padding:0;
+        list-style:none;
+        display:grid; gap:8px;
+      }
+      .item{
+        display:flex; gap:10px; align-items:flex-start;
+        padding:10px 10px;
+        border-radius: 14px;
+        border:1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.06);
+      }
+      .check{
+        width:18px; height:18px;
+        border-radius:6px;
+        border:1px solid rgba(255,255,255,.22);
+        background: rgba(0,0,0,.12);
+        cursor:pointer;
+        position:relative;
+        flex:0 0 auto;
+        margin-top:1px;
+      }
+      .check.on{
+        border-color: rgba(77,255,158,.35);
+        background: rgba(77,255,158,.14);
+      }
+      .check.on:after{
+        content:"";
+        position:absolute;
+        left:5px; top:2px;
+        width:6px; height:10px;
+        border:2px solid rgba(77,255,158,.95);
+        border-top:0; border-left:0;
+        transform: rotate(45deg);
+      }
+      .itText{flex:1}
+      .itTop{display:flex; justify-content:space-between; gap:10px; align-items:baseline}
+      .itTitle{font-size:13px; color:var(--text); margin:0}
+      .itDesc{font-size:12px; color:var(--muted); margin:4px 0 0 0; line-height:1.3}
+      .smallTag{
+        font-family:var(--mono);
+        font-size:11px;
+        color:var(--muted);
+        border:1px solid rgba(255,255,255,.14);
+        background: rgba(0,0,0,.14);
+        padding:3px 8px;
+        border-radius:999px;
+        white-space:nowrap;
+      }
+
+      .toast{
+        position: fixed;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(760px, calc(100% - 28px));
+        border-radius: 18px;
+        border:1px solid rgba(255,255,255,.16);
+        background: rgba(0,0,0,.35);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: var(--shadow);
+        padding: 12px 14px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 12px;
+        z-index: 50;
+      }
+      .toast strong{display:block; font-size:13px}
+      .toast span{display:block; font-size:12px; color:var(--muted); margin-top:2px}
+      .toast .btn{padding:8px 10px; border-radius: 12px}
+      .pulse{
+        animation: pulse 1.3s ease-in-out infinite;
+      }
+      @keyframes pulse{
+        0%{transform: translateY(0)}
+        50%{transform: translateY(-1px)}
+        100%{transform: translateY(0)}
+      }
+      .modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 100;
+}
+.modalCard{
+  width: min(860px, 100%);
+  max-height: min(80vh, 760px);
+  overflow: auto;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+  box-shadow: 0 22px 70px rgba(0,0,0,.60);
+  position: relative;
+}
+.modalHeader{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.modalBody{
+  padding: 14px;
+}
+
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <!-- React 18 + Babel (standalone single-file) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+ <script type="text/babel">
+  const { useEffect, useMemo, useRef, useState } = React;
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function formatMMSS(totalSeconds){
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return mm + ":" + ss;
+  }
+
+  function nowHHMM(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    return hh + ":" + mm;
+  }
+
+  function requestNotifPermission(){
+    if(!("Notification" in window)) return Promise.resolve("unsupported");
+    if(Notification.permission === "granted") return Promise.resolve("granted");
+    if(Notification.permission === "denied") return Promise.resolve("denied");
+    return Notification.requestPermission();
+  }
+
+  function sendNotification(title, body){
+    if(!("Notification" in window)) return;
+    if(Notification.permission !== "granted") return;
+    try{ new Notification(title, { body: body }); }catch(e){}
+  }
+
+  function Modal(props){
+    const open = props.open;
+    const title = props.title;
+    const children = props.children;
+    const onClose = props.onClose;
+
+    useEffect(function(){
+      if(!open) return;
+
+      function onKey(e){
+        if(e.key === "Escape") onClose();
+      }
+      window.addEventListener("keydown", onKey);
+      return function(){ window.removeEventListener("keydown", onKey); };
+    }, [open, onClose]);
+
+    if(!open) return null;
+
+    return (
+      <div
+        className="modalOverlay"
+        onMouseDown={function(e){
+          if(e.target && e.target.classList && e.target.classList.contains("modalOverlay")) onClose();
+        }}
+      >
+        <div className="modalCard" role="dialog" aria-modal="true">
+          <div className="modalHeader">
+            <div style={{display:"flex", alignItems:"center", gap:10}}>
+              <strong style={{fontSize:14}}>{title}</strong>
+              <span className="pill" style={{marginLeft:6}}>Esc · cerrar</span>
+            </div>
+            <button className="btn ghost" onClick={onClose}>✕</button>
+          </div>
+          <div className="modalBody">{children}</div>
+        </div>
+      </div>
+    );
+  }
+
+  function App(){
+    const focusDefault = 25 * 60;
+    const breakDefault = 5 * 60;
+
+    const [phase, setPhase] = useState("focus");
+    const [running, setRunning] = useState(false);
+    const [autoSwitch, setAutoSwitch] = useState(true);
+    const [soundOn, setSoundOn] = useState(true);
+    const [notifOn, setNotifOn] = useState(false);
+
+    const [focusLen, setFocusLen] = useState(focusDefault);
+    const [breakLen, setBreakLen] = useState(breakDefault);
+    const [secondsLeft, setSecondsLeft] = useState(focusDefault);
+
+    const [toast, setToast] = useState(null);
+    const toastTimerRef = useRef(null);
+
+    const [lastCaffeineHHMM, setLastCaffeineHHMM] = useState(function(){
+      const saved = localStorage.getItem("lastCaffeineHHMM");
+      return saved || "";
+    });
+
+    const [cycles, setCycles] = useState(function(){
+      const saved = localStorage.getItem("cyclesDone");
+      return saved ? Number(saved) : 0;
+    });
+
+    // ---- MODALES ----
+    const [openMicro, setOpenMicro] = useState(false);
+    const [openOffice, setOpenOffice] = useState(false);
+    const [openSettings, setOpenSettings] = useState(false);
+
+    // ---- Anti-sueño: acciones con logs + mini-timer ----
+    const [actions, setActions] = useState(function(){
+      const saved = localStorage.getItem("antiSleepActions_v1");
+      if(saved){
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return [
+        { id:"move", title:"Caminar 3–5 min", desc:"Si te estás quedando dormido, lo peor es seguir sentado. Levántate.", icon:"🚶", durationSec: 180, logs: [] },
+        { id:"cold", title:"Agua fría (15–30s)", desc:"Cara / muñecas / cuello. Activación rápida sin cafeína extra.", icon:"💧", durationSec: 20, logs: [] },
+        { id:"breathe", title:"Respiración 1 min (de pie)", desc:"10 respiraciones fuertes: inhala 3–4s, exhala rápido.", icon:"🌬️", durationSec: 60, logs: [] },
+        { id:"water", title:"Agua (ahora)", desc:"Sueño + deshidratación es típico en oficina.", icon:"🥤", durationSec: 10, logs: [] },
+        { id:"light", title:"Luz natural 2–5 min", desc:"Ayuda a reajustar el reloj biológico del turno 5:30.", icon:"☀️", durationSec: 180, logs: [] },
+      ];
+    });
+
+    useEffect(function(){
+      localStorage.setItem("antiSleepActions_v1", JSON.stringify(actions));
+    }, [actions]);
+
+    const [activeActionId, setActiveActionId] = useState(null);
+    const [actionSecondsLeft, setActionSecondsLeft] = useState(0);
+
+    const totalThisPhase = phase === "focus" ? focusLen : breakLen;
+
+    const progress = useMemo(function(){
+      const done = totalThisPhase - secondsLeft;
+      return clamp((done / totalThisPhase) * 100, 0, 100);
+    }, [totalThisPhase, secondsLeft]);
+
+    useEffect(function(){ localStorage.setItem("cyclesDone", String(cycles)); }, [cycles]);
+    useEffect(function(){ localStorage.setItem("lastCaffeineHHMM", lastCaffeineHHMM || ""); }, [lastCaffeineHHMM]);
+
+    // ---- AUDIO (solo tras gesto del usuario) + sonidos por evento ----
+    const audioCtxRef = useRef(null);
+
+    function ensureAudioCtxFromGesture(){
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return null;
+
+      if(!audioCtxRef.current){
+        audioCtxRef.current = new AudioCtx();
+      }
+
+      const ctx = audioCtxRef.current;
+      if(ctx.state === "suspended"){
+        ctx.resume().catch(function(){});
+      }
+      return ctx;
+    }
+
+    function playTone(ctx, freq, ms, gainValue){
+      try{
+        if(!ctx) return;
+
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+
+        o.type = "sine";
+        o.frequency.value = freq;
+
+        const t = ctx.currentTime;
+        const g0 = gainValue || 0.10;
+
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(g0, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + (ms / 1000));
+
+        o.connect(g);
+        g.connect(ctx.destination);
+
+        o.start(t);
+        o.stop(t + (ms / 1000) + 0.02);
+      }catch(e){}
+    }
+
+    function playSound(kind){
+      const ctx = audioCtxRef.current;
+      if(!ctx) return;
+      if(ctx.state === "suspended"){
+        ctx.resume().catch(function(){});
+        return;
+      }
+
+      if(kind === "focusEnd"){
+        playTone(ctx, 784, 140, 0.10);
+        setTimeout(function(){ playTone(ctx, 988, 160, 0.10); }, 110);
+        return;
+      }
+      if(kind === "breakEnd"){
+        playTone(ctx, 523, 140, 0.10);
+        setTimeout(function(){ playTone(ctx, 659, 170, 0.10); }, 110);
+        return;
+      }
+      if(kind === "start"){ playTone(ctx, 880, 70, 0.07); return; }
+      if(kind === "pause"){ playTone(ctx, 330, 70, 0.07); return; }
+      if(kind === "reset"){
+        playTone(ctx, 392, 80, 0.08);
+        setTimeout(function(){ playTone(ctx, 392, 80, 0.08); }, 120);
+        return;
+      }
+      if(kind === "switch"){ playTone(ctx, 660, 80, 0.07); return; }
+      if(kind === "click"){ playTone(ctx, 1047, 35, 0.04); return; }
+      if(kind === "open"){ playTone(ctx, 660, 45, 0.05); setTimeout(function(){ playTone(ctx, 880, 55, 0.05); }, 70); return; }
+      if(kind === "close"){ playTone(ctx, 440, 50, 0.05); return; }
+    }
+    // ---- FIN AUDIO ----
+
+    function showToast(title, body){
+      setToast({ title: title, body: body });
+      if(toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(function(){ setToast(null); }, 5200);
+    }
+
+    function logActionDone(actionId){
+      const ts = Date.now();
+      setActions(function(prev){
+        return prev.map(function(a){
+          if(a.id !== actionId) return a;
+          const logs = (a.logs || []).slice();
+          logs.push(ts);
+          return Object.assign({}, a, { logs: logs });
+        });
+      });
+    }
+
+    function startActionTimer(actionId){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+
+      const a = actions.find(function(x){ return x.id === actionId; });
+      if(!a) return;
+
+      setActiveActionId(actionId);
+      setActionSecondsLeft(a.durationSec || 60);
+      showToast("Hacer ahora: " + a.title, "Timer iniciado (" + formatMMSS(a.durationSec || 60) + ").");
+    }
+
+    function stopActionTimer(){
+      setActiveActionId(null);
+      setActionSecondsLeft(0);
+    }
+
+    useEffect(function(){
+      if(!activeActionId) return;
+      if(actionSecondsLeft <= 0) return;
+
+      const id = setInterval(function(){
+        setActionSecondsLeft(function(s){
+          if(s <= 1) return 0;
+          return s - 1;
+        });
+      }, 1000);
+
+      return function(){ clearInterval(id); };
+    }, [activeActionId, actionSecondsLeft]);
+
+    useEffect(function(){
+      if(!activeActionId) return;
+      if(actionSecondsLeft !== 0) return;
+
+      if(soundOn) playSound("breakEnd");
+      logActionDone(activeActionId);
+
+      const a = actions.find(function(x){ return x.id === activeActionId; });
+      showToast("✅ Acción completada", a ? (a.title + " registrada.") : "Registrada.");
+      stopActionTimer();
+    }, [actionSecondsLeft, activeActionId]);
+
+    function addAction(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+
+      const title = prompt("Nombre de la acción (ej: 'Subir escaleras 2 min'):");
+      if(!title) return;
+
+      const desc = prompt("Descripción corta (opcional):") || "";
+      const icon = prompt("Emoji (ej: 🔥, 🚶, 💧):") || "✨";
+      const dur = prompt("Duración en segundos (ej: 120). Deja vacío para 60:", "60");
+      const durationSec = dur ? Math.max(5, Number(dur)) : 60;
+
+      const id = "a_" + String(Date.now());
+      const newItem = { id:id, title:title, desc:desc, icon:icon, durationSec: durationSec, logs: [] };
+
+      setActions(function(prev){ return [newItem].concat(prev); });
+      showToast("Acción agregada", title);
+    }
+
+    // Pomodoro tick
+    useEffect(function(){
+      if(!running) return;
+      const id = setInterval(function(){
+        setSecondsLeft(function(prev){
+          if(prev <= 1) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+      return function(){ clearInterval(id); };
+    }, [running]);
+
+    // Pomodoro ends
+    useEffect(function(){
+      if(secondsLeft !== 0) return;
+
+      const onEnd = function(){
+        if(soundOn){
+          if(phase === "focus") playSound("focusEnd");
+          else playSound("breakEnd");
+        }
+
+        if(phase === "focus"){
+          sendNotification("⏳ Fin del foco", "Levántate 2–3 min: luz + movimiento. Luego 5 min de descanso.");
+          showToast("Fin del foco", "Levántate 2–3 min: muévete, agua y respira. (Atajo: Space)");
+          setCycles(function(c){ return c + 1; });
+        }else{
+          sendNotification("✅ Fin del descanso", "Vuelve al foco. Empieza con una tarea simple para arrancar.");
+          showToast("Fin del descanso", "Vuelve al foco con una tarea simple. (Atajo: Space)");
+        }
+
+        if(autoSwitch){
+          const next = phase === "focus" ? "break" : "focus";
+          setPhase(next);
+          setSecondsLeft(next === "focus" ? focusLen : breakLen);
+          setRunning(true);
+        }else{
+          setRunning(false);
+        }
+      };
+
+      const t = setTimeout(onEnd, 60);
+      return function(){ clearTimeout(t); };
+    }, [secondsLeft, autoSwitch, phase, focusLen, breakLen, soundOn]);
+
+    // Align secondsLeft when not running
+    useEffect(function(){
+      if(running) return;
+      setSecondsLeft(phase === "focus" ? focusLen : breakLen);
+    }, [focusLen, breakLen, phase]);
+
+    // Title
+    useEffect(function(){
+      const symbol = running ? (phase === "focus" ? "🎯" : "☕") : "⏸️";
+      document.title = symbol + " " + formatMMSS(secondsLeft) + " · Pomodoro";
+    }, [secondsLeft, running, phase]);
+
+    function toggleRun(){
+      const ctx = ensureAudioCtxFromGesture();
+      if(soundOn && ctx){
+        if(running) playSound("pause");
+        else playSound("start");
+      }
+      setRunning(function(v){ return !v; });
+    }
+function editAction(actionId){
+  ensureAudioCtxFromGesture();
+  if(soundOn) playSound("click");
+
+  const a = actions.find(function(x){ return x.id === actionId; });
+  if(!a) return;
+
+  const title = prompt("Editar nombre:", a.title);
+  if(title === null) return;
+
+  const desc = prompt("Editar descripción:", a.desc || "");
+  if(desc === null) return;
+
+  const icon = prompt("Editar emoji:", a.icon || "✨");
+  if(icon === null) return;
+
+  const dur = prompt("Editar duración (segundos):", String(a.durationSec || 60));
+  if(dur === null) return;
+
+  const durationSec = Math.max(5, Number(dur) || 60);
+
+  setActions(function(prev){
+    return prev.map(function(it){
+      if(it.id !== actionId) return it;
+      return Object.assign({}, it, {
+        title: title.trim() || it.title,
+        desc: desc,
+        icon: icon.trim() || it.icon,
+        durationSec: durationSec
+      });
+    });
+  });
+
+  showToast("Editado", "Acción actualizada.");
+}
+
+function deleteAction(actionId){
+  ensureAudioCtxFromGesture();
+  if(soundOn) playSound("click");
+
+  const a = actions.find(function(x){ return x.id === actionId; });
+  if(!a) return;
+
+  const ok = confirm("¿Eliminar esta acción?\n\n" + a.icon + " " + a.title);
+  if(!ok) return;
+
+  // si está corriendo, la detenemos
+  if(activeActionId === actionId){
+    stopActionTimer();
+  }
+
+  setActions(function(prev){
+    return prev.filter(function(it){ return it.id !== actionId; });
+  });
+
+  showToast("Eliminado", "Acción borrada.");
+}
+
+function clearActionLogs(actionId){
+  ensureAudioCtxFromGesture();
+  if(soundOn) playSound("click");
+
+  const a = actions.find(function(x){ return x.id === actionId; });
+  if(!a) return;
+
+  const ok = confirm("¿Borrar historial (Hoy/Total/Última) de esta acción?\n\n" + a.icon + " " + a.title);
+  if(!ok) return;
+
+  setActions(function(prev){
+    return prev.map(function(it){
+      if(it.id !== actionId) return it;
+      return Object.assign({}, it, { logs: [] });
+    });
+  });
+
+  showToast("Historial borrado", "Registros reiniciados.");
+}
+
+
+    function resetTimer(){
+      ensureAudioCtxFromGesture();
+      setRunning(false);
+      setSecondsLeft(phase === "focus" ? focusLen : breakLen);
+      showToast("Reiniciado", "Timer reiniciado para esta fase.");
+      if(soundOn) playSound("reset");
+    }
+
+    function switchPhase(next){
+      ensureAudioCtxFromGesture();
+      setRunning(false);
+      setPhase(next);
+      setSecondsLeft(next === "focus" ? focusLen : breakLen);
+      showToast("Cambiado", next === "focus" ? "Modo Enfoque (25:00)" : "Modo Descanso (05:00)");
+      if(soundOn) playSound("switch");
+    }
+
+    async function toggleNotif(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+
+      const next = !notifOn;
+      if(next){
+        const perm = await requestNotifPermission();
+        if(perm !== "granted"){
+          showToast("Notificaciones", "No se pudo activar (permiso denegado o no soportado).");
+          setNotifOn(false);
+          return;
+        }
+        showToast("Notificaciones activadas", "Te avisaré al terminar cada bloque.");
+        setNotifOn(true);
+      }else{
+        setNotifOn(false);
+        showToast("Notificaciones desactivadas", "Listo.");
+      }
+    }
+
+    // Keyboard shortcuts
+    useEffect(function(){
+      const onKey = function(e){
+        if(e.code === "Space"){
+          e.preventDefault();
+          ensureAudioCtxFromGesture();
+          toggleRun();
+        }
+        const k = (e.key || "").toLowerCase();
+        if(k === "r") resetTimer();
+        if(k === "s"){
+          ensureAudioCtxFromGesture();
+          playSound("click");
+          setSoundOn(function(v){ return !v; });
+          showToast("Sonido", "Alternado con tecla S.");
+        }
+        if(k === "n") toggleNotif();
+      };
+      window.addEventListener("keydown", onKey);
+      return function(){ window.removeEventListener("keydown", onKey); };
+    }, [toggleNotif, phase, focusLen, breakLen, running, secondsLeft, soundOn, notifOn]);
+
+    function setCaffeineNow(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+
+      const hhmm = nowHHMM();
+      setLastCaffeineHHMM(hhmm);
+      showToast("☕ Café registrado", "Último café: " + hhmm + ". Ideal: evita después de 14:30–15:00.");
+    }
+
+    function caffeineHint(){
+      if(!lastCaffeineHHMM) return "Registra tu último café para no afectar el sueño de hoy.";
+      return "Último café: " + lastCaffeineHHMM + ". Consejo: último café antes de 14:30–15:00.";
+    }
+
+    function onAutoToggle(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+      setAutoSwitch(function(v){ return !v; });
+    }
+
+    function onSoundToggle(){
+      ensureAudioCtxFromGesture();
+      playSound("click");
+      setSoundOn(function(v){ return !v; });
+    }
+
+    function openMicroModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("open");
+      setOpenMicro(true);
+    }
+    function closeMicroModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("close");
+      setOpenMicro(false);
+    }
+
+    function openOfficeModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("open");
+      setOpenOffice(true);
+    }
+    function closeOfficeModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("close");
+      setOpenOffice(false);
+    }
+
+    function openSettingsModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("open");
+      setOpenSettings(true);
+    }
+    function closeSettingsModal(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("close");
+      setOpenSettings(false);
+    }
+
+    const phaseName = phase === "focus" ? "Enfoque" : "Descanso";
+    const dotClassName = "dot " + (!running ? "paused" : (phase === "break" ? "break" : ""));
+
+    return (
+      <div className="wrap">
+        <div className="app">
+
+          {/* LEFT: Pomodoro */}
+          <div className="card">
+            <div className="pad">
+              <div className="header">
+                <div>
+                  <div className="title">
+                    <div className="badge">
+                      <span className={dotClassName}></span>
+                      <span>{phaseName}</span>
+                      <span style={{opacity:.5}}>·</span>
+                      <span>{running ? "En marcha" : "Pausado"}</span>
+                    </div>
+                  </div>
+                  <h1 style={{marginTop:10}}>Pomodoro 25/5 · Focus & Wake</h1>
+                  <p className="sub">
+                    Diseñado para oficina y días con sueño: foco corto, descansos activos y recordatorios anti-micro-sueño.
+                  </p>
+                </div>
+
+                {/* toggles + botón de Ajustes */}
+                <div className="rightActions" style={{flexDirection:"column", alignItems:"flex-end", gap:10}}>
+                  <div style={{display:"flex", flexWrap:"wrap", gap:10, justifyContent:"flex-end"}}>
+                    <div className="toggle">
+                      <span>Auto</span>
+                      <div className={"switch " + (autoSwitch ? "on" : "")} onClick={onAutoToggle} role="button" aria-label="Auto switch">
+                        <div className="knob"></div>
+                      </div>
+                    </div>
+
+                    <div className="toggle">
+                      <span>Sonido</span>
+                      <div className={"switch good " + (soundOn ? "on" : "")} onClick={onSoundToggle} role="button" aria-label="Sound">
+                        <div className="knob"></div>
+                      </div>
+                    </div>
+
+                    <div className="toggle">
+                      <span>Notif</span>
+                      <div className={"switch warn " + (notifOn ? "on" : "")} onClick={toggleNotif} role="button" aria-label="Notifications">
+                        <div className="knob"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button className="btn" onClick={openSettingsModal}>
+                    ⚙️ Ajustes rápidos
+                  </button>
+                </div>
+              </div>
+
+              <div className="timerArea">
+                {/* BIG: timer */}
+                <div className="big">
+                  <div className="clockRow">
+                    <div className="phaseLabel">
+                      <span className="pill">{phase === "focus" ? "🎯 Foco" : "☕ Descanso"}</span>
+                      <span className="pill">Ciclos: <span style={{fontFamily:"var(--mono)", marginLeft:6}}>{cycles}</span></span>
+                    </div>
+                    <div className="pill">Meta: {phase === "focus" ? "25m" : "5m"}</div>
+                  </div>
+
+                  <div className={"time " + (running ? "pulse" : "")}>
+                    {formatMMSS(secondsLeft)}
+                  </div>
+
+                  <div className="progressWrap">
+                    <div className="bar" aria-label="progress bar">
+                      <div className={"fill " + (phase === "break" ? "break" : "")} style={{width: progress + "%"}}></div>
+                    </div>
+                    <div style={{display:"flex", justifyContent:"space-between", marginTop:8, color:"var(--muted)", fontSize:12}}>
+                      <span>Progreso</span>
+                      <span style={{fontFamily:"var(--mono)"}}>{Math.round(progress)}%</span>
+                    </div>
+                  </div>
+
+                  <div className="controls">
+                    <button className={"btn " + (running ? "warn" : "primary")} onClick={toggleRun}>
+                      {running ? "⏸️ Pausar" : "▶️ Iniciar"}
+                    </button>
+                    <button className="btn ghost" onClick={resetTimer}>↺ Reiniciar</button>
+                    <button className="btn" onClick={function(){ switchPhase("focus"); }}>🎯 Foco</button>
+                    <button className="btn" onClick={function(){ switchPhase("break"); }}>☕ Descanso</button>
+                  </div>
+
+                  <div className="kbs">
+                    <span className="kbd">Space · Play/Pause</span>
+                    <span className="kbd">R · Reset</span>
+                    <span className="kbd">S · Sonido</span>
+                    <span className="kbd">N · Notif</span>
+                    <span className="kbd">Esc · Cierra modales</span>
+                  </div>
+                </div>
+
+                {/* RIGHT of timerArea: simple info (opcional) */}
+                <div className="big">
+                  <div className="sectionTitle">
+                    <h2>📌 Estado</h2>
+                    <span className="pill">rápido</span>
+                  </div>
+
+                  <div style={{display:"grid", gap:10}}>
+                    <button className="btn primary" onClick={openMicroModal}>🧯 Micro-acciones</button>
+                    <button className="btn" onClick={openOfficeModal}>📌 Recomendaciones oficina</button>
+
+                    {activeActionId && (
+                      <div className="pill" style={{display:"inline-flex", gap:8, flexWrap:"wrap"}}>
+                        ⏱️ Acción en curso: {formatMMSS(actionSecondsLeft)} ·{" "}
+                        {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).icon : ""}{" "}
+                        {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).title : ""}
+                      </div>
+                    )}
+
+                    <div style={{color:"var(--muted)", fontSize:12, lineHeight:1.45}}>
+                      Si te estás quedando dormido: levántate 2–3 min, agua fría y respiración rápida.
+                      Luego vuelve al foco con una tarea simple.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT PANEL */}
+          <div className="card">
+            <div className="pad">
+              <div className="sideGrid">
+                <div className="mini">
+                  <div className="sectionTitle">
+                    <h2>Accesos rápidos</h2>
+                    <span className="pill">ordenado</span>
+                  </div>
+
+                  <div style={{display:"grid", gap:10}}>
+                    <button className="btn primary" onClick={openMicroModal}>
+                      🧯 Abrir micro-acciones
+                    </button>
+                    <button className="btn" onClick={openOfficeModal}>
+                      📌 Ver recomendaciones oficina
+                    </button>
+                    <button className="btn" onClick={openSettingsModal}>
+                      ⚙️ Ajustes rápidos
+                    </button>
+
+                    {activeActionId && (
+                      <div className="pill" style={{display:"inline-flex", gap:8, flexWrap:"wrap"}}>
+                        ⏱️ Acción en curso: {formatMMSS(actionSecondsLeft)} ·{" "}
+                        {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).icon : ""}{" "}
+                        {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).title : ""}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mini">
+                  <div className="sectionTitle">
+                    <h2>Tip rápido</h2>
+                    <span className="pill">si te duermes</span>
+                  </div>
+                  <div style={{color:"var(--muted)", fontSize:12, lineHeight:1.4}}>
+                    Si te estás quedando dormido: levántate 2–3 min, agua fría y respiración rápida.
+                    Después vuelve al foco con una tarea simple.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* MODAL: Ajustes */}
+          <Modal open={openSettings} title="⚙️ Ajustes rápidos" onClose={closeSettingsModal}>
+            <div className="sectionTitle">
+              <h2>Duraciones</h2>
+              <span className="pill">config</span>
+            </div>
+
+            <div className="grid2">
+              <div>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                  <span className="pill">Foco (min)</span>
+                  <span className="smallTag">{Math.round(focusLen/60)}m</span>
+                </div>
+                <input
+                  type="range"
+                  min="15"
+                  max="60"
+                  value={Math.round(focusLen/60)}
+                  onChange={function(e){
+                    ensureAudioCtxFromGesture();
+                    if(soundOn) playSound("click");
+                    setFocusLen(Number(e.target.value)*60);
+                  }}
+                  style={{width:"100%"}}
+                />
+                <div style={{color:"var(--muted)", fontSize:12, marginTop:6}}>
+                  Recomendado si estás con sueño: 20–25 min.
+                </div>
+              </div>
+
+              <div>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                  <span className="pill">Descanso (min)</span>
+                  <span className="smallTag">{Math.round(breakLen/60)}m</span>
+                </div>
+                <input
+                  type="range"
+                  min="3"
+                  max="15"
+                  value={Math.round(breakLen/60)}
+                  onChange={function(e){
+                    ensureAudioCtxFromGesture();
+                    if(soundOn) playSound("click");
+                    setBreakLen(Number(e.target.value)*60);
+                  }}
+                  style={{width:"100%"}}
+                />
+                <div style={{color:"var(--muted)", fontSize:12, marginTop:6}}>
+                  Descansos activos: de pie, luz, agua.
+                </div>
+              </div>
+            </div>
+
+            <div style={{marginTop:12, display:"flex", gap:10, flexWrap:"wrap"}}>
+              <button className="btn" onClick={function(){
+                ensureAudioCtxFromGesture(); if(soundOn) playSound("click");
+                setFocusLen(25*60); setBreakLen(5*60);
+                showToast("Preset", "25/5 aplicado.");
+              }}>
+                25/5
+              </button>
+
+              <button className="btn" onClick={function(){
+                ensureAudioCtxFromGesture(); if(soundOn) playSound("click");
+                setFocusLen(20*60); setBreakLen(5*60);
+                showToast("Preset", "20/5 aplicado (anti-sueño).");
+              }}>
+                20/5 (anti-sueño)
+              </button>
+
+              <button className="btn" onClick={function(){
+                ensureAudioCtxFromGesture(); if(soundOn) playSound("click");
+                setCycles(0);
+                showToast("Ciclos", "Contador reiniciado.");
+              }}>
+                Reiniciar ciclos
+              </button>
+            </div>
+
+            <div style={{marginTop:14}}>
+              <div className="sectionTitle">
+                <h2>☕ Corte de cafeína</h2>
+                <span className="pill">salud del sueño</span>
+              </div>
+              <div style={{display:"flex", gap:10, flexWrap:"wrap", alignItems:"center"}}>
+                <button className="btn primary" onClick={setCaffeineNow}>Registrar café ahora</button>
+                <span style={{color:"var(--muted)", fontSize:12}}>{caffeineHint()}</span>
+              </div>
+            </div>
+          </Modal>
+
+          {/* MODAL: Micro-acciones */}
+          <Modal open={openMicro} title="🧯 Anti-sueño (rápido) — Micro-acciones" onClose={closeMicroModal}>
+            <div style={{display:"flex", gap:10, flexWrap:"wrap", marginBottom:10}}>
+              <button className="btn" onClick={addAction}>＋ Agregar acción</button>
+              {activeActionId && (
+                <span className="pill">
+                  ⏱️ {formatMMSS(actionSecondsLeft)} ·{" "}
+                  {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).icon : ""}{" "}
+                  {actions.find(function(a){ return a.id === activeActionId; }) ? actions.find(function(a){ return a.id === activeActionId; }).title : ""}
+                </span>
+              )}
+            </div>
+
+            <ul className="list">
+              {actions.map(function(a){
+                const logs = a.logs || [];
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const todayTs = today.getTime();
+
+                const doneToday = logs.filter(function(t){ return t >= todayTs; }).length;
+
+                const last = logs.length ? new Date(logs[logs.length - 1]) : null;
+                const lastStr = last
+                  ? (String(last.getHours()).padStart(2,"0") + ":" + String(last.getMinutes()).padStart(2,"0"))
+                  : "—";
+
+                const isRunning = activeActionId === a.id;
+
+                return (
+                  <li className="item" key={a.id}>
+                    <div style={{display:"flex", flexDirection:"column", gap:8, width:"100%"}}>
+                      <div style={{display:"flex", justifyContent:"space-between", gap:10}}>
+                        <div className="itText">
+                          <div className="itTop">
+                            <p className="itTitle">{a.title}</p>
+                            <span className="smallTag">{a.icon}</span>
+                          </div>
+                          <p className="itDesc">{a.desc}</p>
+
+                          <div style={{display:"flex", gap:8, flexWrap:"wrap", marginTop:8}}>
+                            <span className="smallTag">Hoy: {doneToday}</span>
+                            <span className="smallTag">Total: {logs.length}</span>
+                            <span className="smallTag">Última: {lastStr}</span>
+                            <span className="smallTag">Dur: {formatMMSS(a.durationSec || 60)}</span>
+                          </div>
+                        </div>
+
+                        <div style={{display:"flex", flexDirection:"column", gap:8, alignItems:"flex-end"}}>
+  <button
+    className={"btn " + (isRunning ? "warn" : "")}
+    onClick={function(){
+      ensureAudioCtxFromGesture();
+      if(isRunning){
+        stopActionTimer();
+        if(soundOn) playSound("pause");
+      }else{
+        startActionTimer(a.id);
+      }
+    }}
+  >
+    {isRunning ? "⏸️ Parar" : "⏱️ Hacer ahora"}
+  </button>
+
+  <button
+    className="btn primary"
+    onClick={function(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("start");
+      logActionDone(a.id);
+      showToast("✅ Hecho", a.title + " registrado.");
+    }}
+  >
+    +1 Hecho
+  </button>
+
+  <div style={{display:"flex", gap:8}}>
+    <button className="btn ghost" onClick={function(){ editAction(a.id); }}>
+      ✏️ Editar
+    </button>
+
+    <button className="btn ghost" onClick={function(){ clearActionLogs(a.id); }}>
+      🧹 Hist
+    </button>
+
+    <button className="btn ghost" onClick={function(){ deleteAction(a.id); }}>
+      🗑️ Eliminar
+    </button>
+  </div>
+</div>
+
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Modal>
+
+          {/* MODAL: Recomendaciones oficina */}
+          <Modal open={openOffice} title="📌 Recomendaciones (oficina)" onClose={closeOfficeModal}>
+            <div style={{color:"var(--muted)", fontSize:12, lineHeight:1.5}}>
+              <div style={{marginBottom:10}}>
+                <span className="pill">Regla de oro</span>
+                <div style={{marginTop:8}}>
+                  Si sientes que te duermes: <strong>levántate</strong>, camina 2–3 min, agua fría, respira.
+                </div>
+              </div>
+
+              <div style={{marginBottom:10}}>
+                <span className="pill">Café inteligente</span>
+                <div style={{marginTop:8}}>
+                  Mejor ½ taza antes de 15:00 que una grande tarde (te destruye la noche).
+                </div>
+              </div>
+
+              <div style={{marginBottom:10}}>
+                <span className="pill">Luz + movimiento</span>
+                <div style={{marginTop:8}}>
+                  Aprovecha descansos para luz natural y caminar. Aunque esté nublado, sirve.
+                </div>
+              </div>
+
+              <div>
+                <span className="pill">Noche</span>
+                <div style={{marginTop:8}}>
+                  Si te levantas 5:30, apunta a <strong>cama 22:15–22:30</strong>.
+                </div>
+              </div>
+            </div>
+          </Modal>
+
+          {toast && (
+            <div className="toast">
+              <div>
+                <strong>{toast.title}</strong>
+                <span>{toast.body}</span>
+              </div>
+              <button className="btn" onClick={function(){ ensureAudioCtxFromGesture(); if(soundOn) playSound("click"); setToast(null); }}>
+                Cerrar
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+  </body>
+</html>
