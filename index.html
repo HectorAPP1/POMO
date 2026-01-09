@@ -165,6 +165,23 @@ body[data-theme="light"]{
     color:var(--muted);
   }
 
+  .menuTrigger{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:40px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.20);
+    box-shadow: var(--shadow2);
+    color: var(--text);
+    cursor:pointer;
+    transition: transform .08s ease, background .12s ease, border-color .12s ease;
+  }
+  .menuTrigger:hover{background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.24);}
+  .menuTrigger:active{transform: translateY(1px);}
+
   .switch{
     width:44px; height:26px;
     border-radius:999px;
@@ -446,6 +463,67 @@ body[data-theme="light"]{
 
   .modalBody{ padding: 14px; }
 
+  .sheetCard{
+    width: min(360px, calc(100% - 32px));
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: linear-gradient(180deg, rgba(17,23,45,.94), rgba(9,13,28,.92));
+    box-shadow: 0 18px 60px rgba(0,0,0,.65);
+    overflow:hidden;
+  }
+
+  .sheetHeader{
+    padding: 16px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .sheetTitle{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:14px;
+    color:var(--text);
+  }
+
+  .sheetBody{
+    padding: 10px 8px 14px 8px;
+    display:grid;
+    gap:6px;
+  }
+
+  .sheetOption{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.05);
+    cursor:pointer;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .sheetOption:hover{
+    background: rgba(255,255,255,.10);
+    border-color: rgba(255,255,255,.18);
+  }
+  .sheetOption strong{font-size:13px; color:var(--text);}
+  .sheetOption span{font-size:12px; color:var(--muted);}
+
+  .sheetIcon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.08);
+    font-size:18px;
+  }
+
   body[data-theme="light"] .card{
     border:1px solid var(--stroke);
     box-shadow: var(--shadow);
@@ -483,6 +561,15 @@ body[data-theme="light"]{
     border-color: rgba(15,25,48,.14);
   }
 
+  body[data-theme="light"] .menuTrigger{
+    background: rgba(15,25,48,.06);
+    border-color: rgba(15,25,48,.12);
+  }
+  body[data-theme="light"] .menuTrigger:hover{
+    background: rgba(15,25,48,.10);
+    border-color: rgba(15,25,48,.20);
+  }
+
   body[data-theme="light"] .fill{
     background: linear-gradient(90deg, rgba(32,188,126,.85), rgba(82,124,255,.72));
   }
@@ -493,6 +580,25 @@ body[data-theme="light"]{
   body[data-theme="light"] .modalCard{
     background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.90));
     border:1px solid rgba(15,25,48,.14);
+  }
+
+  body[data-theme="light"] .sheetCard{
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.92));
+    border:1px solid rgba(15,25,48,.14);
+    box-shadow: 0 22px 60px rgba(10,15,40,.18);
+  }
+  body[data-theme="light"] .sheetHeader{border-bottom:1px solid rgba(15,25,48,.10);}
+  body[data-theme="light"] .sheetOption{
+    border:1px solid rgba(15,25,48,.12);
+    background: rgba(15,25,48,.04);
+  }
+  body[data-theme="light"] .sheetOption:hover{
+    background: rgba(15,25,48,.08);
+    border-color: rgba(15,25,48,.18);
+  }
+  body[data-theme="light"] .sheetIcon{
+    border:1px solid rgba(15,25,48,.14);
+    background: rgba(15,25,48,.08);
   }
 
   body[data-theme="light"] .toast{
@@ -673,6 +779,59 @@ function Modal({ open, title, children, onClose }) {
   );
 }
 
+function QuickSheet({ open, title, subtitle, options, onSelect, onClose }) {
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e){ if(e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return ReactDOM.createPortal(
+    <div
+      className="modalOverlay"
+      onMouseDown={(e) => {
+        if (e.target.classList.contains("modalOverlay")) {
+          onClose();
+        }
+      }}
+    >
+      <div className="sheetCard" role="dialog" aria-modal="true">
+        <div className="sheetHeader">
+          <div className="sheetTitle">
+            <span style={{fontSize:18, opacity:.7}}>⋮</span>
+            <div style={{display:"grid", gap:4}}>
+              <strong style={{fontSize:14}}>{title}</strong>
+              {subtitle && <span style={{fontSize:12, color:"var(--muted)"}}>{subtitle}</span>}
+            </div>
+          </div>
+          <button className="btn ghost" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="sheetBody">
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className="sheetOption"
+              onClick={() => onSelect(opt)}
+            >
+              <span className="sheetIcon">{opt.icon}</span>
+              <div style={{display:"grid", gap:4, textAlign:"left"}}>
+                <strong>{opt.title}</strong>
+                {opt.desc && <span>{opt.desc}</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 
   function App(){
     const focusDefault = 25 * 60;
@@ -711,6 +870,7 @@ function Modal({ open, title, children, onClose }) {
     const [openMicro, setOpenMicro] = useState(false);
     const [openOffice, setOpenOffice] = useState(false);
     const [openSettings, setOpenSettings] = useState(false);
+    const [openQuickMenu, setOpenQuickMenu] = useState(false);
 
     // ---- Anti-sueño: acciones con logs + mini-timer ----
     const [actions, setActions] = useState(function(){
@@ -1166,6 +1326,53 @@ function clearActionLogs(actionId){
       setOpenSettings(false);
     }
 
+    function openQuickMenuSheet(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("open");
+      setOpenQuickMenu(true);
+    }
+    function closeQuickMenuSheet(){
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("close");
+      setOpenQuickMenu(false);
+    }
+
+    function quickMenuGoToSettings(){
+      closeQuickMenuSheet();
+      openSettingsModal();
+    }
+
+    function handleQuickMenuSelect(opt){
+      if(!opt) return;
+      ensureAudioCtxFromGesture();
+      if(soundOn) playSound("click");
+      if(typeof opt.action === "function") opt.action();
+    }
+
+    const quickMenuOptions = [
+      {
+        id: "settings",
+        icon: "⚙️",
+        title: "Ajustes rápidos",
+        desc: "Duraciones, presets y contador de ciclos.",
+        action: quickMenuGoToSettings
+      },
+      {
+        id: "micro",
+        icon: "🧯",
+        title: "Micro-acciones",
+        desc: "Estrategias anti-sueño con timers.",
+        action: function(){ closeQuickMenuSheet(); openMicroModal(); }
+      },
+      {
+        id: "office",
+        icon: "📌",
+        title: "Tips de oficina",
+        desc: "Recordatorios para días con sueño.",
+        action: function(){ closeQuickMenuSheet(); openOfficeModal(); }
+      },
+    ];
+
     function toggleThemeMode(){
       ensureAudioCtxFromGesture();
       if(soundOn) playSound("click");
@@ -1202,9 +1409,9 @@ function clearActionLogs(actionId){
                   </p>
                 </div>
 
-                {/* toggles + botón de Ajustes */}
-                  <div className="rightActions">
-                     <div style={{display:"flex", flexWrap:"wrap", gap:10, justifyContent:"flex-end"}}>
+                {/* toggles + menú rápido */}
+                <div className="rightActions" style={{flexDirection:"column", alignItems:"flex-end", gap:10}}>
+                  <div style={{display:"flex", flexWrap:"wrap", gap:10, justifyContent:"flex-end"}}>
                     <div className="toggle">
                       <span>Auto</span>
                       <div className={"switch auto " + (autoSwitch ? "on" : "")} onClick={onAutoToggle} role="button" aria-label="Auto switch">
@@ -1237,25 +1444,16 @@ function clearActionLogs(actionId){
                       >
                         <div className="knob"></div>
                       </div>
-                     
                     </div>
                   </div>
-
-                    <div className="toggle">
-                      <span>Ajustes ⚙️</span>
-                      <div
-                        className={"switch neutral " + (openSettings ? "on" : "")}
-                        onClick={() => {
-                        ensureAudioCtxFromGesture();
-                      if (soundOn) playSound("click");
-                        setOpenSettings(v => !v);
-                      }}
-                        role="button"
-                        aria-label="Ajustes"
-                      >
-                    <div className="knob"></div>
-                   </div>
-                </div>
+                  <button
+                    type="button"
+                    className="menuTrigger"
+                    aria-label="Abrir menú rápido"
+                    onClick={openQuickMenuSheet}
+                  >
+                    ⋮
+                  </button>
                 </div>
               </div>
 
@@ -1333,6 +1531,15 @@ function clearActionLogs(actionId){
           </div>
 
         
+
+          <QuickSheet
+            open={openQuickMenu}
+            title="Menú rápido"
+            subtitle="Accesos frecuentes"
+            options={quickMenuOptions}
+            onSelect={handleQuickMenuSelect}
+            onClose={closeQuickMenuSheet}
+          />
 
           {/* MODAL: Ajustes */}
           <Modal open={openSettings} title="⚙️ Ajustes rápidos" onClose={closeSettingsModal}>
